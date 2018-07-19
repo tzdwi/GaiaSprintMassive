@@ -70,7 +70,6 @@ def get_lightcurve(name, directory, clean=True):
                  )
             if 'qual_frame' in data.columns:
                 ok = ok & (data['qual_frame'] > 8)
-                
             dfs.append(data[ok])
         else:
             dfs.append(data)
@@ -78,5 +77,8 @@ def get_lightcurve(name, directory, clean=True):
     #final LC concatenated and sorted on MJD
     df = pd.concat(dfs)
     df.sort_values('mjd',inplace=True)
+    
+    if clean:
+        df.dropna(subset=['w1mpro','w2mpro','w1sigmpro','w2sigmpro'], inplace=True)
     
     return df
