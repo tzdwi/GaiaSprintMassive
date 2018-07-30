@@ -2,6 +2,9 @@
 from __future__ import print_function, absolute_import
 from WISE_tools import *
 import FATS, pandas as pd, numpy as np
+import traceback
+from pebble import ProcessPool
+from concurrent.futures import TimeoutError
 from multiprocessing import Pool
 from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import KernelDensity
@@ -9,6 +12,8 @@ from astropy.modeling.functional_models import Gaussian2D
 from astropy.modeling import fitting
 from scipy.odr import *
 from sklearn.metrics import r2_score
+
+data_dir = '/gscratch/stf/tzdw/WISE_lcs/bright_blue_lightcurves/data/'
 
 def KDE_fit(x,y):
     """
@@ -238,6 +243,22 @@ def get_features(name):
     return pd.DataFrame(data=np.array(result.values()).reshape(1,len(result.values())), 
                         columns=result.keys())
 
+feature_names = ['Psi_eta', 'Q31_color', 'PercentAmplitude', 'MaxSlope', 'SmallKurtosis', 'KD_major_std_0', 'KD_theta_0', 'KD_fit_sqresid', 'StetsonJ', 'Eta_color', 'Meanvariance', 'StetsonL', 'Rcs', 'StetsonK', 'KD_xmean_0', 'FluxPercentileRatioMid65', 'Freq3_harmonics_amplitude_0', 'Freq3_harmonics_amplitude_1', 'Freq3_harmonics_amplitude_2', 'Freq3_harmonics_amplitude_3', 'AndersonDarling', 'KD_xmean_1', 'FluxPercentileRatioMid20', 'LinearTrend', 'Freq2_harmonics_rel_phase_3', 'Freq2_harmonics_rel_phase_2', 'Freq2_harmonics_rel_phase_1', 'Freq2_harmonics_rel_phase_0', 'FluxPercentileRatioMid50', 'Eta_e', 'Freq2_harmonics_amplitude_0', 'Freq1_harmonics_amplitude_2', 'Freq1_harmonics_amplitude_3', 'Freq1_harmonics_amplitude_0', 'Freq1_harmonics_amplitude_1', 'SlottedA_length', 'KD_ecc_0', 'Q31', 'CMD_r_squared', 'KD_amp_1', 'Freq2_harmonics_amplitude_2', 'Skew', 'CAR_tau', 'StructureFunction_index_32', 'Std', 'KD_ymean_0', 'MedianBRP', 'KD_ecc_1', 'Mean', 'KD_ymean_1', 'KD_theta_1', 'Beyond1Std', 'Psi_CS', 'KDE_bandwidth', 'Freq3_harmonics_rel_phase_2', 'Freq3_harmonics_rel_phase_3', 'Freq3_harmonics_rel_phase_0', 'Freq3_harmonics_rel_phase_1', 'Amplitude', 'KD_major_std_1', 'Freq2_harmonics_amplitude_1', 'FluxPercentileRatioMid35', 'Freq2_harmonics_amplitude_3', 'Con', 'CMD_slope', 'CAR_mean', 'KD_amp_0', 'PercentDifferenceFluxPercentile', 'Color', 'Period_fit', 'StructureFunction_index_21', 'Freq1_harmonics_rel_phase_0', 'Freq1_harmonics_rel_phase_1', 'Freq1_harmonics_rel_phase_2', 'Freq1_harmonics_rel_phase_3', 'PairSlopeTrend', 'CAR_sigma', 'Autocor_length', 'StructureFunction_index_31', 'MedianAbsDev', 'Gskew', 'FluxPercentileRatioMid80', 'PeriodLS', 'StetsonK_AC']
+
+fail_d = {col:np.nan for col in feature_names}
+fail_d['Name'] = None
+fail_out = pd.DataFrame(data=np.array(fail_d.values()).reshape(1,len(fail_d.values())), columns=fail_d.keys())
+
+def safe_features(name):
+    print(name)
+    try:
+        out = get_features(name)
+        return out
+    except Exception as e:
+        fail_out['Name'] = [name]
+        print('Caught exception for {0}'.format(name))
+        return fail_out
+
 if __name__ == '__main__':
     import warnings
     from sys import argv
@@ -246,19 +267,36 @@ if __name__ == '__main__':
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
     
-        assert len(argv) == 4, "This takes three arguments: the data directory with trailing /, the output csv, and the number of cores to use"
+        assert len(argv) == 5, "This takes four arguments: the data directory with trailing /, the output csv, the number of cores to use, and the timeout for each object"
 
         data_dir = argv[1]
         outfile = argv[2]
         ncores = int(argv[3])
+        timeout = float(argv[4])
 
         assert data_dir[-1] == '/', "The last character of the data directory should be /"
 
         assert exists(data_dir), "Make sure the data directory exists"
 
         names = parse_source_names(data_dir)
+        
+        results = []
 
-        p = Pool(ncores)
-        dfs = p.map(get_features,names)
-        out = pd.concat(dfs)
+        with ProcessPool(max_workers=ncores) as pool:
+            future = pool.map(get_features, names, timeout=timeout)
+
+            iterator = future.result()
+
+            # iterate over all results, if a computation timed out
+            # print it and continue to the next result
+            while True:
+                try:
+                    result = next(iterator)
+                    results.append(result)
+                except StopIteration:
+                    break  
+                except TimeoutError as error:
+                    print("function took longer than {0} seconds".format(error.args[1]))
+
+        out = pd.concat(results)
         out.to_csv(outfile)
