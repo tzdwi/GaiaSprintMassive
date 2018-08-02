@@ -1,0 +1,3 @@
+THINGS WE DID TO MAKE MOX WORK
+
+There's now a miniconda2 install, accessible by calling 'py2.' it's super minimal. We have some wrappers on the functions to handle errors. If one of the features fucks up, then return NaN dataframe. If one of the objects times out, don't return anything. This is super basic and not really all that good.
