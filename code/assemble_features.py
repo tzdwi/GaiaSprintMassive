@@ -283,7 +283,7 @@ if __name__ == '__main__':
         results = []
 
         with ProcessPool(max_workers=ncores) as pool:
-            future = pool.map(get_features, names, timeout=timeout)
+            future = pool.map(safe_features, names, timeout=timeout)
 
             iterator = future.result()
 
@@ -298,5 +298,6 @@ if __name__ == '__main__':
                 except TimeoutError as error:
                     print("function took longer than {0} seconds".format(error.args[1]))
 
+
         out = pd.concat(results)
-        out.to_csv(outfile)
+	out.to_csv(outfile)
