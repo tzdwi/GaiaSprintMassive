@@ -109,4 +109,4 @@ venv.bak/
 *.gz
 *.tar
 *.vot
-data/MIST/
+WISE/data/MIST/
