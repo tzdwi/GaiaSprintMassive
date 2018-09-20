@@ -6,15 +6,126 @@ import traceback
 import argparse
 from pebble import ProcessPool
 from concurrent.futures import TimeoutError
-from multiprocessing import Pool
 from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import KernelDensity
 from astropy.modeling.functional_models import Gaussian2D
 from astropy.modeling import fitting
 from scipy.odr import *
+from scipy.optimize import minimize
 from sklearn.metrics import r2_score
+from celerite import terms
+import emcee as mc
 
-data_dir = '/gscratch/stf/tzdw/WISE_lcs/bright_blue_lightcurves/data/'
+#In celerite-land, this is a DRW Kernel
+class DRWTerm(terms.RealTerm):
+    parameter_names = ("log_sigma", "log_tau")
+
+    def get_real_coefficients(self, params):
+        log_sigma, log_tau = params
+        sigma = np.exp(log_sigma)
+        tau = np.exp(log_tau)
+        return (
+            sigma**2.0 , 1/tau,
+        )
+
+def mean_per_visit(time,mag,err,dt_tol=100):
+    """
+    Calculates the mean per-visit point.
+    
+    Assume some delta time over which something is considered a separate visit.
+    """
+    visits = []
+    visit = np.array([[time[0],mag[0],err[0]]])
+    for i in range(1,len(time)):
+        dif = time[i] - time[i-1]
+        if dif <= dt_tol:
+            visit = np.append(visit,[[time[i],mag[i],err[i]]],axis=0)
+        else:
+            visits.append(visit)
+            visit = np.array([[time[i],mag[i],err[i]]])
+    visits.append(visit)
+    visits = np.array(visits)
+    mean_times = []
+    mean_mags = []
+    mean_errs = []
+    for visit in visits:
+        mean_times.append(np.mean(visit[:,0]))
+        mean_mags.append(np.mean(visit[:,1]))
+        mean_errs.append(np.sqrt(np.sum(np.power(visit[:,2],2.0)))/len(visit))
+    return np.array(mean_times),np.array(mean_mags),np.array(mean_errs)
+
+
+def coarse_DRW(times,mags,errs):
+    """
+    Does a quick DRW fit using celerite+emcee to the average points in the visit. NOT GOOD FOR SHORT TERM VARIABILITY
+    
+    Parameters
+    ----------
+    times : array-like
+    mags : array-like
+    errs : array-like
+    
+    Returns
+    -------
+    DRW_sigma : float
+    DRW_tau : float
+    DRW_mean : float
+    """
+    
+    mt,mm,me = mean_per_visit(times,mags,errs)
+    
+    #Bounds on sigma: the minimum error -> 10 times the range of mags
+    #Bounds on tau: 0.25 times the minimum time difference -> 2 times the time baseline
+    
+    DRWbounds = dict(log_sigma=(np.log(np.min(me)), np.log(10.0*np.ptp(mm))), 
+                 log_tau=(np.log(0.25*np.min(np.diff(mt))), np.log(2.0*np.ptp(mt))))
+    
+    #First guess on sigma: STD of points
+    #First guess on tau: 0.5 * the time baseline
+    kern = DRWTerm(log_sigma=np.std(mm), log_tau=np.log(0.5*np.ptp(mt)),bounds=DRWbounds)
+    
+    #Define and first compute of the DRW
+    gp = celerite.GP(DRW_kern, mean=np.mean(mm), fit_mean = True)
+    gp.compute(mt, me)
+    
+    #maximize likelihood, which requires autograd's numpy?
+    initial_params = gp.get_parameter_vector()
+    bounds = gp.get_parameter_bounds()
+    import autograd.numpy as np
+    soln = minimize(neg_log_like, initial_params, jac=grad_neg_log_like,
+                method="L-BFGS-B", bounds=bounds, args=(mm, gp))
+    import numpy as np
+    
+    #Now for the emceee
+    def log_probability(params):
+        gp.set_parameter_vector(params)
+        lp = gp.log_prior()
+        if not np.isfinite(lp):
+            return -np.inf
+        return gp.log_likelihood(mm) + lp
+    
+    #Initialize walkers
+    initial = np.array(soln.x)
+    ndim, nwalkers = len(initial), 32
+    sampler = mc.EnsembleSampler(nwalkers, ndim, log_probability)
+    
+    #Burn in for 500 steps
+    p0 = initial + 1e-8 * np.random.randn(nwalkers, ndim)
+    p0, lp, _ = sampler.run_mcmc(p0, 500)
+    
+    #Reset, randomize the seed
+    sampler.reset()
+    np.random.seed(42)
+    sampler.run_mcmc(p0, 3000)
+    
+    #flatten along step axis
+    samples = sampler.flatchain
+    DRW_sigma = np.exp(np.mean(samples[:,0]))
+    DRW_tau = np.exp(np.mean(samples[:,1]))
+    DRW_mean = np.mean(samples[:,2])
+    
+    return DRW_sigma,DRW_tau,DRW_mean
+
 
 def KDE_fit(x,y):
     """
@@ -183,7 +294,7 @@ def linear_CMD_fit(x,y,xerr,yerr):
     return slope, r_squared
 
 
-def get_features(name,exclude_list = []):
+def get_features(name, data_dir, exclude_list = []):
     """
     A function that is given a name, and then outputs all 68 features (plus the name)
     in a handy pandas dataframe.
@@ -240,12 +351,21 @@ def get_features(name,exclude_list = []):
     result['CMD_slope'] = slope
     result['CMD_r_squared'] = r_squared
     
+    times = df['mjd'].values
+    mags = df['w1mpro'].values
+    errs = df['w1sigmpro'].values
+    DRW_sigma, DRW_tau, DRW_mean = coarse_DRW(times,mags,errs)
+    
+    result['DRW_sigma'] = DRW_sigma
+    result['DRW_tau'] = DRW_tau
+    result['DRW_mean'] = DRW_mean
+    
     result['Name'] = name
     
     return pd.DataFrame(data=np.array(result.values()).reshape(1,len(result.values())), 
                         columns=result.keys())
 
-feature_names = ['Psi_eta', 'Q31_color', 'PercentAmplitude', 'MaxSlope', 'SmallKurtosis', 'KD_major_std_0', 'KD_theta_0', 'KD_fit_sqresid', 'StetsonJ', 'Eta_color', 'Meanvariance', 'StetsonL', 'Rcs', 'StetsonK', 'KD_xmean_0', 'FluxPercentileRatioMid65', 'Freq3_harmonics_amplitude_0', 'Freq3_harmonics_amplitude_1', 'Freq3_harmonics_amplitude_2', 'Freq3_harmonics_amplitude_3', 'AndersonDarling', 'KD_xmean_1', 'FluxPercentileRatioMid20', 'LinearTrend', 'Freq2_harmonics_rel_phase_3', 'Freq2_harmonics_rel_phase_2', 'Freq2_harmonics_rel_phase_1', 'Freq2_harmonics_rel_phase_0', 'FluxPercentileRatioMid50', 'Eta_e', 'Freq2_harmonics_amplitude_0', 'Freq1_harmonics_amplitude_2', 'Freq1_harmonics_amplitude_3', 'Freq1_harmonics_amplitude_0', 'Freq1_harmonics_amplitude_1', 'SlottedA_length', 'KD_ecc_0', 'Q31', 'CMD_r_squared', 'KD_amp_1', 'Freq2_harmonics_amplitude_2', 'Skew', 'CAR_tau', 'StructureFunction_index_32', 'Std', 'KD_ymean_0', 'MedianBRP', 'KD_ecc_1', 'Mean', 'KD_ymean_1', 'KD_theta_1', 'Beyond1Std', 'Psi_CS', 'KDE_bandwidth', 'Freq3_harmonics_rel_phase_2', 'Freq3_harmonics_rel_phase_3', 'Freq3_harmonics_rel_phase_0', 'Freq3_harmonics_rel_phase_1', 'Amplitude', 'KD_major_std_1', 'Freq2_harmonics_amplitude_1', 'FluxPercentileRatioMid35', 'Freq2_harmonics_amplitude_3', 'Con', 'CMD_slope', 'CAR_mean', 'KD_amp_0', 'PercentDifferenceFluxPercentile', 'Color', 'Period_fit', 'StructureFunction_index_21', 'Freq1_harmonics_rel_phase_0', 'Freq1_harmonics_rel_phase_1', 'Freq1_harmonics_rel_phase_2', 'Freq1_harmonics_rel_phase_3', 'PairSlopeTrend', 'CAR_sigma', 'Autocor_length', 'StructureFunction_index_31', 'MedianAbsDev', 'Gskew', 'FluxPercentileRatioMid80', 'PeriodLS', 'StetsonK_AC']
+feature_names = ['Psi_eta', 'Q31_color', 'PercentAmplitude', 'MaxSlope', 'SmallKurtosis', 'KD_major_std_0', 'KD_theta_0', 'KD_fit_sqresid', 'StetsonJ', 'Eta_color', 'Meanvariance', 'StetsonL', 'Rcs', 'StetsonK', 'KD_xmean_0', 'FluxPercentileRatioMid65', 'Freq3_harmonics_amplitude_0', 'Freq3_harmonics_amplitude_1', 'Freq3_harmonics_amplitude_2', 'Freq3_harmonics_amplitude_3', 'AndersonDarling', 'KD_xmean_1', 'FluxPercentileRatioMid20', 'LinearTrend', 'Freq2_harmonics_rel_phase_3', 'Freq2_harmonics_rel_phase_2', 'Freq2_harmonics_rel_phase_1', 'Freq2_harmonics_rel_phase_0', 'FluxPercentileRatioMid50', 'Eta_e', 'Freq2_harmonics_amplitude_0', 'Freq1_harmonics_amplitude_2', 'Freq1_harmonics_amplitude_3', 'Freq1_harmonics_amplitude_0', 'Freq1_harmonics_amplitude_1', 'SlottedA_length', 'KD_ecc_0', 'Q31', 'CMD_r_squared', 'KD_amp_1', 'Freq2_harmonics_amplitude_2', 'Skew', 'CAR_tau', 'StructureFunction_index_32', 'Std', 'KD_ymean_0', 'MedianBRP', 'KD_ecc_1', 'Mean', 'KD_ymean_1', 'KD_theta_1', 'Beyond1Std', 'Psi_CS', 'KDE_bandwidth', 'Freq3_harmonics_rel_phase_2', 'Freq3_harmonics_rel_phase_3', 'Freq3_harmonics_rel_phase_0', 'Freq3_harmonics_rel_phase_1', 'Amplitude', 'KD_major_std_1', 'Freq2_harmonics_amplitude_1', 'FluxPercentileRatioMid35', 'Freq2_harmonics_amplitude_3', 'Con', 'CMD_slope', 'CAR_mean', 'KD_amp_0', 'PercentDifferenceFluxPercentile', 'Color', 'Period_fit', 'StructureFunction_index_21', 'Freq1_harmonics_rel_phase_0', 'Freq1_harmonics_rel_phase_1', 'Freq1_harmonics_rel_phase_2', 'Freq1_harmonics_rel_phase_3', 'PairSlopeTrend', 'CAR_sigma', 'Autocor_length', 'StructureFunction_index_31', 'MedianAbsDev', 'Gskew', 'FluxPercentileRatioMid80', 'PeriodLS', 'StetsonK_AC','DRW_tau','DRW_sigma','DRW_mean']
 
 fail_d = {col:np.nan for col in feature_names}
 fail_d['Name'] = None
@@ -275,7 +395,7 @@ if __name__ == '__main__':
     def safe_features(name):
         print(name)
         try:
-            out = get_features(name,exclude_list)
+            out = get_features(name,data_dir,exclude_list=exclude_list)
             return out
         except Exception as e:
             fail_out['Name'] = [name]
