@@ -13,8 +13,17 @@ from astropy.modeling import fitting
 from scipy.odr import *
 from scipy.optimize import minimize
 from sklearn.metrics import r2_score
+import celerite
 from celerite import terms
 import emcee as mc
+
+def neg_log_like(params, y, gp):
+    gp.set_parameter_vector(params)
+    return -gp.log_likelihood(y)
+
+def grad_neg_log_like(params, y, gp):
+    gp.set_parameter_vector(params)
+    return -gp.grad_log_likelihood(y)[1]
 
 #In celerite-land, this is a DRW Kernel
 class DRWTerm(terms.RealTerm):
@@ -71,6 +80,7 @@ def coarse_DRW(times,mags,errs):
     DRW_tau : float
     DRW_mean : float
     """
+    import numpy as np
     
     mt,mm,me = mean_per_visit(times,mags,errs)
     
@@ -85,7 +95,7 @@ def coarse_DRW(times,mags,errs):
     kern = DRWTerm(log_sigma=np.std(mm), log_tau=np.log(0.5*np.ptp(mt)),bounds=DRWbounds)
     
     #Define and first compute of the DRW
-    gp = celerite.GP(DRW_kern, mean=np.mean(mm), fit_mean = True)
+    gp = celerite.GP(kern, mean=np.mean(mm), fit_mean = True)
     gp.compute(mt, me)
     
     #maximize likelihood, which requires autograd's numpy?
@@ -390,7 +400,7 @@ if __name__ == '__main__':
     exclude_list = []
     if args.exclude is not None:
         exclude_list = args.exclude.split()
-        fail_out.drop(exclude_list)
+        fail_out.drop(exclude_list,axis=1)
         
     def safe_features(name):
         print(name)
