@@ -1,7 +1,11 @@
 #requires python 2.7 (of course)
 from __future__ import print_function, absolute_import
 from WISE_tools import *
-import FATS, pandas as pd, numpy as np
+try:
+    import FATS
+except:
+    pass
+import pandas as pd, numpy as np
 import traceback
 import argparse
 from pebble import ProcessPool
@@ -16,14 +20,6 @@ from sklearn.metrics import r2_score
 import celerite
 from celerite import terms
 import emcee as mc
-
-def neg_log_like(params, y, gp):
-    gp.set_parameter_vector(params)
-    return -gp.log_likelihood(y)
-
-def grad_neg_log_like(params, y, gp):
-    gp.set_parameter_vector(params)
-    return -gp.grad_log_likelihood(y)[1]
 
 #In celerite-land, this is a DRW Kernel
 class DRWTerm(terms.RealTerm):
@@ -101,10 +97,26 @@ def coarse_DRW(times,mags,errs):
     #maximize likelihood, which requires autograd's numpy?
     initial_params = gp.get_parameter_vector()
     bounds = gp.get_parameter_bounds()
+    def neg_log_like(params, y, gp):
+        gp.set_parameter_vector(params)
+        return -gp.log_likelihood(y)
+
+    def grad_neg_log_like(params, y, gp):
+        gp.set_parameter_vector(params)
+        return -gp.grad_log_likelihood(y)[1]
+    
+    global np
+    autograd = __import__('autograd.numpy', globals(), locals()) 
+    np = autograd.numpy
+    
     import autograd.numpy as np
+    
     soln = minimize(neg_log_like, initial_params, jac=grad_neg_log_like,
                 method="L-BFGS-B", bounds=bounds, args=(mm, gp))
-    import numpy as np
+    
+    global np
+    numpy = __import__('numpy', globals(), locals()) 
+    np = numpy
     
     #Now for the emceee
     def log_probability(params):
@@ -119,14 +131,14 @@ def coarse_DRW(times,mags,errs):
     ndim, nwalkers = len(initial), 32
     sampler = mc.EnsembleSampler(nwalkers, ndim, log_probability)
     
-    #Burn in for 500 steps
+    #Burn in for 1000 steps
     p0 = initial + 1e-8 * np.random.randn(nwalkers, ndim)
-    p0, lp, _ = sampler.run_mcmc(p0, 500)
+    p0, lp, _ = sampler.run_mcmc(p0, 1000)
     
-    #Reset, randomize the seed
+    #Reset, randomize the seed, run for 5000
     sampler.reset()
-    np.random.seed(42)
-    sampler.run_mcmc(p0, 3000)
+    np.random.seed(np.random.randint(0,100))
+    sampler.run_mcmc(p0, 5000)
     
     #flatten along step axis
     samples = sampler.flatchain
@@ -375,15 +387,17 @@ def get_features(name, data_dir, exclude_list = []):
     return pd.DataFrame(data=np.array(result.values()).reshape(1,len(result.values())), 
                         columns=result.keys())
 
-feature_names = ['Psi_eta', 'Q31_color', 'PercentAmplitude', 'MaxSlope', 'SmallKurtosis', 'KD_major_std_0', 'KD_theta_0', 'KD_fit_sqresid', 'StetsonJ', 'Eta_color', 'Meanvariance', 'StetsonL', 'Rcs', 'StetsonK', 'KD_xmean_0', 'FluxPercentileRatioMid65', 'Freq3_harmonics_amplitude_0', 'Freq3_harmonics_amplitude_1', 'Freq3_harmonics_amplitude_2', 'Freq3_harmonics_amplitude_3', 'AndersonDarling', 'KD_xmean_1', 'FluxPercentileRatioMid20', 'LinearTrend', 'Freq2_harmonics_rel_phase_3', 'Freq2_harmonics_rel_phase_2', 'Freq2_harmonics_rel_phase_1', 'Freq2_harmonics_rel_phase_0', 'FluxPercentileRatioMid50', 'Eta_e', 'Freq2_harmonics_amplitude_0', 'Freq1_harmonics_amplitude_2', 'Freq1_harmonics_amplitude_3', 'Freq1_harmonics_amplitude_0', 'Freq1_harmonics_amplitude_1', 'SlottedA_length', 'KD_ecc_0', 'Q31', 'CMD_r_squared', 'KD_amp_1', 'Freq2_harmonics_amplitude_2', 'Skew', 'CAR_tau', 'StructureFunction_index_32', 'Std', 'KD_ymean_0', 'MedianBRP', 'KD_ecc_1', 'Mean', 'KD_ymean_1', 'KD_theta_1', 'Beyond1Std', 'Psi_CS', 'KDE_bandwidth', 'Freq3_harmonics_rel_phase_2', 'Freq3_harmonics_rel_phase_3', 'Freq3_harmonics_rel_phase_0', 'Freq3_harmonics_rel_phase_1', 'Amplitude', 'KD_major_std_1', 'Freq2_harmonics_amplitude_1', 'FluxPercentileRatioMid35', 'Freq2_harmonics_amplitude_3', 'Con', 'CMD_slope', 'CAR_mean', 'KD_amp_0', 'PercentDifferenceFluxPercentile', 'Color', 'Period_fit', 'StructureFunction_index_21', 'Freq1_harmonics_rel_phase_0', 'Freq1_harmonics_rel_phase_1', 'Freq1_harmonics_rel_phase_2', 'Freq1_harmonics_rel_phase_3', 'PairSlopeTrend', 'CAR_sigma', 'Autocor_length', 'StructureFunction_index_31', 'MedianAbsDev', 'Gskew', 'FluxPercentileRatioMid80', 'PeriodLS', 'StetsonK_AC','DRW_tau','DRW_sigma','DRW_mean']
-
-fail_d = {col:np.nan for col in feature_names}
-fail_d['Name'] = None
-fail_out = pd.DataFrame(data=np.array(fail_d.values()).reshape(1,len(fail_d.values())), columns=fail_d.keys())
-
 if __name__ == '__main__':
     import warnings
     from os.path import exists
+    
+    feature_names = ['Psi_eta', 'Q31_color', 'PercentAmplitude', 'MaxSlope', 'SmallKurtosis', 'KD_major_std_0', 'KD_theta_0', 'KD_fit_sqresid', 'StetsonJ', 'Eta_color', 'Meanvariance', 'StetsonL', 'Rcs', 'StetsonK', 'KD_xmean_0', 'FluxPercentileRatioMid65', 'Freq3_harmonics_amplitude_0', 'Freq3_harmonics_amplitude_1', 'Freq3_harmonics_amplitude_2', 'Freq3_harmonics_amplitude_3', 'AndersonDarling', 'KD_xmean_1', 'FluxPercentileRatioMid20', 'LinearTrend', 'Freq2_harmonics_rel_phase_3', 'Freq2_harmonics_rel_phase_2', 'Freq2_harmonics_rel_phase_1', 'Freq2_harmonics_rel_phase_0', 'FluxPercentileRatioMid50', 'Eta_e', 'Freq2_harmonics_amplitude_0', 'Freq1_harmonics_amplitude_2', 'Freq1_harmonics_amplitude_3', 'Freq1_harmonics_amplitude_0', 'Freq1_harmonics_amplitude_1', 'SlottedA_length', 'KD_ecc_0', 'Q31', 'CMD_r_squared', 'KD_amp_1', 'Freq2_harmonics_amplitude_2', 'Skew', 'CAR_tau', 'StructureFunction_index_32', 'Std', 'KD_ymean_0', 'MedianBRP', 'KD_ecc_1', 'Mean', 'KD_ymean_1', 'KD_theta_1', 'Beyond1Std', 'Psi_CS', 'KDE_bandwidth', 'Freq3_harmonics_rel_phase_2', 'Freq3_harmonics_rel_phase_3', 'Freq3_harmonics_rel_phase_0', 'Freq3_harmonics_rel_phase_1', 'Amplitude', 'KD_major_std_1', 'Freq2_harmonics_amplitude_1', 'FluxPercentileRatioMid35', 'Freq2_harmonics_amplitude_3', 'Con', 'CMD_slope', 'CAR_mean', 'KD_amp_0', 'PercentDifferenceFluxPercentile', 'Color', 'Period_fit', 'StructureFunction_index_21', 'Freq1_harmonics_rel_phase_0', 'Freq1_harmonics_rel_phase_1', 'Freq1_harmonics_rel_phase_2', 'Freq1_harmonics_rel_phase_3', 'PairSlopeTrend', 'CAR_sigma', 'Autocor_length', 'StructureFunction_index_31', 'MedianAbsDev', 'Gskew', 'FluxPercentileRatioMid80', 'PeriodLS', 'StetsonK_AC','DRW_tau','DRW_sigma','DRW_mean']
+
+    fail_d = {col:np.nan for col in feature_names}
+    fail_d['Name'] = None
+    fail_out = pd.DataFrame(data=np.array(fail_d.values()).reshape(1,len(fail_d.values())),             columns=fail_d.keys())
+
+
     
     parser = argparse.ArgumentParser()
     parser.add_argument('--datadir')
