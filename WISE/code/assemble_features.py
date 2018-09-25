@@ -1,6 +1,7 @@
 #requires python 2.7 (of course)
 from __future__ import print_function, absolute_import
 from WISE_tools import *
+import FATS
 import pandas as pd, numpy as np
 import traceback
 import argparse
@@ -469,7 +470,6 @@ if __name__ == '__main__':
             out = get_features(name,data_dir,exclude_list=exclude_list)
             return out
         except Exception as e:
-            raise e
             fail_out['Name'] = [name]
             print('Caught exception for {0}'.format(name))
             return fail_out
