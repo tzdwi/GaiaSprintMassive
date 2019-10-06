@@ -81,4 +81,7 @@ def get_lightcurve(name, directory, clean=True):
     if clean:
         df.dropna(subset=['w1mpro','w2mpro','w1sigmpro','w2sigmpro'], inplace=True)
     
+    df['w1w2'] = df['w1mpro'].values - df['w2mpro'].values
+    df['w1w2err'] = np.sqrt(df['w1sigmpro'].values**2.0 + df['w2sigmpro'].values**2.0)
+    
     return df
