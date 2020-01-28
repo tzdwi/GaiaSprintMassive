@@ -122,6 +122,7 @@ def plot_confusion_matrix(y_true, y_pred,
            yticks=np.arange(cm.shape[0]),
            # ... and label them with the respective list entries
            xticklabels=classes, yticklabels=classes,
+           ylim = ax.get_xlim()[::-1], #trying this to get the ylimits not to cut off...
            title=title,
            ylabel='True label',
            xlabel='Predicted label')
