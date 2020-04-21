@@ -91,6 +91,7 @@ def get_lightcurve(name, directory, clean=True):
 
 def plot_confusion_matrix(y_true, y_pred,
                           normalize=False,
+                          normalize_axis=1,
                           title=None,
                           cmap=plt.cm.Blues,
                           classes=None,
@@ -98,12 +99,15 @@ def plot_confusion_matrix(y_true, y_pred,
     """
     This function prints and plots the confusion matrix.
     Normalization can be applied by setting `normalize=True`.
+    If normalize is True and normalize_axis is 1, returns the confusion matrix. If normalize_axis is 0, 
+    returns the efficiency matrix.
     """
     if not title:
         if normalize:
             title = 'Normalized confusion matrix'
         else:
             title = 'Confusion matrix, without normalization'
+    assert normalize_axis in [0,1]
 
     # Only use the labels that appear in the data
     if classes is None:
@@ -111,7 +115,10 @@ def plot_confusion_matrix(y_true, y_pred,
     # Compute confusion matrix
     cm = confusion_matrix(y_true, y_pred,labels=classes)
     if normalize:
-        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+        if normalize_axis==1:
+            cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+        else:
+            cm = cm.astype('float') / cm.sum(axis=0)
         np.nan_to_num(cm,copy=False)
 
     fig, ax = plt.subplots()
@@ -140,6 +147,49 @@ def plot_confusion_matrix(y_true, y_pred,
                     ha="center", va="center",
                     color="white" if cm[i, j] > thresh else "black",
                     fontsize=8)
+    fig.tight_layout()
+    fig.figsize = figsize
+    return fig,ax
+
+def plot_completeness_contamination(y_true, y_pred,
+                              title=None,
+                              c_dict=None,
+                              m_dict=None,
+                              classes=None,
+                              figsize=(10,10),
+                              **kwargs):
+    """
+    This function calculates the confusion matrix, normalizes over rows and columns, then plots the diagonals against each other
+    If c_dict and m_dict are dictionaries with `classes` as keys, and valid colors or markers as values.
+    """
+
+    # Only use the labels that appear in the data
+    if classes is None:
+        classes = unique_labels(y_true, y_pred)
+    # Compute confusion matrix
+    cm = confusion_matrix(y_true, y_pred,labels=classes)
+    conf_mat = np.nan_to_num(cm.astype('float') / cm.sum(axis=1)[:, np.newaxis])
+    effi_mat = np.nan_to_num(cm.astype('float') / cm.sum(axis=0))
+    
+    comp = np.diag(conf_mat)
+    cont = 1 - np.diag(effi_mat)
+
+    fig, ax = plt.subplots()
+    if c_dict is not None:
+        cs = [c_dict[clas] for clas in classes]
+    else:
+        cs = ['k' for clas in classes]
+    if m_dict is not None:
+        ms = [m_dict[clas] for clas in classes]
+    else:
+        ms = ['o' for clas in classes]
+            
+    for com, con, clas, c, m in zip(comp, cont, classes, cs, ms):
+        plt.scatter(com, con, c=c, marker=m, label=clas,**kwargs)
+    # We want to show all ticks...
+    ax.set(title=title,
+           xlabel='Completeness',
+           ylabel='Contamination')
     fig.tight_layout()
     fig.figsize = figsize
     return fig,ax

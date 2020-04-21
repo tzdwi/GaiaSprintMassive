@@ -110,3 +110,9 @@ venv.bak/
 *.tar
 *.vot
 WISE/data/MIST/
+
+#ignore plots
+*.pdf
+*.png
+*.eps
+
