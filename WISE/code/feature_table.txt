@@ -1,0 +1,22 @@
+\centerwidetable
+\begin{rotatetable*}
+\begin{deluxetable*}{lcccccrr}
+\tablefontsize{\scriptsize}
+\tablecaption{Feature values and assigned labels for all stars in our sample. Missing numbers are indicated with ``-''. \label{tab:feature_values}}
+\tablehead{\colhead{Common Name} & \colhead{$M_G$ [mag]} & \colhead{$G-J$ [mag]} & \colhead{$W1-W2$ [mag]} & \colhead{$\log\chi^2_{red,W1}$} & \colhead{$\log\langle \Delta t \rangle_{W1}$ [d]} & \colhead{Label} & \colhead{Coarse Label}} 
+\startdata
+HD 236270 & -3.54342624 & 0.3541 & 0.1420 & 0.389 &  -  & RSG & Cool \\ 
+LS   I +64   10 & -3.40866054 & 0.7154 & 0.0020 &  -  &  -  & OBA & Hot \\ 
+LS   I +60   69 & -3.22094985 & 0.8769 & -0.0340 & 0.061 &  -  & OBAe & EM \\ 
+BD+62  2353 & -4.27358395 & 0.4653 & -0.0350 & 0.110 & 2.816 & SupergiantOBA & Hot \\ 
+HD     73 & -3.29367442 & -0.6567 & -0.0520 & 3.157 & 2.701 & EvolvedOBA & Hot \\ 
+HD 240496 & -3.84380534 & 1.0127 & 0.0130 & -0.064 & 2.764 & OBA & Hot \\ 
+WISE J000559.28-790653.3 & -5.32554735 & 1.3391 & -0.0390 & 0.072 & 3.162 & Unknown/Candidate & Unknown/Candidate \\ 
+LS   I +59   30 & -3.34464936 & 0.6748 & -0.0430 & 0.234 &  -  & OBA & Hot \\ 
+BD+57  2870 & -4.53103041 & 1.1711 & 0.0040 & 0.046 & 3.135 & SupergiantOBA & Hot \\ 
+BD+62     1 & -3.31029252 & 0.9010 & 0.2660 & 1.622 & 2.813 & EvolvedOBA & Hot \\ 
+\enddata
+\tablecomments{To illustrate the content of the table, we only show the first ten rows, and a subset of the features. A complete machine-readable version will be made available online via Vizier.}
+\end{deluxetable*}
+\end{rotatetable*}
+

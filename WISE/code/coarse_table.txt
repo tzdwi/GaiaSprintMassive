@@ -1,0 +1,19 @@
+\begin{deluxetable*}{lccr}
+\tabletypesize{\scriptsize}
+\tablecaption{Common names, coordinates, and predicted labels of 2550 stars input to the SVC trained on coarse labels.\label{tab:coarse_candidates}}
+\tablehead{\colhead{Common Name} & \colhead{R.A. [deg]} & \colhead{Dec [deg]} & \colhead{Predicted Coarse Label}} 
+\startdata
+WISE J000559.28-790653.3 & 1.49713706 & -79.11483482 & Hot \\ 
+TYC 4500-1480-1 & 2.86210879 & 79.08686958 & Hot \\ 
+BD+61    45 & 5.25504760 & 62.77064970 & Hot \\ 
+ NGC  104    LEE    2520 & 5.41170226 & -72.21106679 & Hot \\ 
+WISE J002203.44-693554.7 & 5.51434821 & -69.59851087 & Hot \\ 
+WISE J002207.43-742212.1 & 5.53102165 & -74.37003199 & Hot \\ 
+WISE J002318.05-742326.4 & 5.82523611 & -74.39068759 & Hot \\ 
+WISE J002340.20-750446.9 & 5.91756693 & -75.07972556 & Hot \\ 
+WISE J002758.92-764527.2 & 6.99552600 & -76.75757402 & Hot \\ 
+WISE J002759.32-742119.8 & 6.99734043 & -74.35552728 & Hot \\ 
+\enddata
+\tablecomments{The first ten rows are shown to illustrate the content of the table. A complete machine-readable version will be made available online via Vizier.}
+\end{deluxetable*}
+

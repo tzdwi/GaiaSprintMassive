@@ -1,0 +1,20 @@
+\startlongtable
+\begin{deluxetable}{lcc}
+\tabletypesize{\scriptsize}
+\tablecaption{Common names and coordinates of stars predicted to be RSGs by the SVC trained on refined labels.\label{tab:rsg_candidates}}
+\tablehead{\colhead{Common Name} & \colhead{R.A. [deg]} & \colhead{Dec [deg]}} 
+\startdata
+SP77  48-11 & 81.07900941 & -70.43417562 \\ 
+WISE J185608.58-163255.1 & 284.03575762 & -16.54867009 \\ 
+W61 19-14 & 83.07777354 & -67.52941938 \\ 
+OGLE BRIGHT-LMC-MISC-169 & 72.94711333 & -69.32348227 \\ 
+WISE J194127.64+385155.3 & 295.36520609 & 38.86536427 \\ 
+ NGC 2004   BBBC     431 & 82.69161818 & -67.29036242 \\ 
+{[KWV2015]} J045626.51-692350.6 & 74.11062177 & -69.39740804 \\ 
+W61  6-54 & 85.54018822 & -69.21978048 \\ 
+WISE J064232.30-715243.3 & 100.63462144 & -71.87871874 \\ 
+W61  6-34 & 85.51621031 & -69.21870016 \\ 
+\enddata
+\tablecomments{The first ten rows are shown to illustrate the content of the table. A complete machine-readable version will be made available online via Vizier.}
+\end{deluxetable}
+

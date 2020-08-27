@@ -1,0 +1,167 @@
+##Command to produce the output: "neato -Teps classify.gv > classify.eps"
+
+digraph Classify {
+ratio="fill";
+ size="8,5!";
+ margin=0;
+graph [ resolution=150, fontsize=80 ];
+node [shape=box label="Sample", fontsize=80];  Sample; 
+node [shape=box label="LBV" color=mediumorchid, fontsize=80, style="filled"];  LBV; 
+node [shape=box label="WR" color=mediumpurple, fontsize=80, style="filled"];  WR; 
+node [shape=box label="RSG" color=lightcoral, fontsize=80, style="filled"];  RSG; 
+node [shape=box label="YSG" color=yellow, fontsize=80, style="filled"];  YSG; 
+node [shape=box label="OBAe" color=lightseagreen, fontsize=80, style="filled"];  OBAe; 
+node [shape=box label="Evolved OBA" color=cornflowerblue, fontsize=80, style="filled"];  EvolvedOBA; 
+node [shape=box label="Main Sequence OBA" color=slateblue, fontcolor="yellow", fontsize=80, style="filled"];  MainSequenceOBA; 
+node [shape=box label="Supergiant OBA" color=blue, fontcolor="yellow", fontsize=80, style="filled"]; SupergiantOBA; 
+node [shape=box label="OBA" color=dodgerblue, fontcolor="black", fontsize=80, style="filled"]; OBA; 
+node [shape=box, label="C/S/Giant" color=lightsalmon, fontcolor="black", fontsize=80, style="filled"]; CSG;
+node [shape=box, label="Yellow Dwarf" color=goldenrod, fontcolor="black", fontsize=80, style="filled"]; YD;
+node [shape=box, label="OB [e]" color=darkgreen, fontcolor="white", fontsize=80, style="filled"]; Bracket;
+node [shape=box, label="Misc. Variable" color=black, fontcolor="white", fontsize=80, style="filled"]; MVar;
+node [shape=box, label="Unknown/Candidate" color=black, fontcolor="white", fontsize=80, style="filled"]; UC;
+node [shape=ellipse,label="Is LBV?" color=black, fontcolor="black", fontsize=80, style=""]; IsLBV ;
+node [shape=ellipse,label="Is WR?" color=black, fontsize=80]; IsWR ;
+node [shape=ellipse,label="Is K/M?" color=black, fontsize=80]; IsKM ;
+node [shape=ellipse,label="Is Giant?" color=black, fontsize=80]; IsGiant ;
+node [shape=ellipse,label="Is F/G?" color=black, fontsize=80]; IsFG ;
+node [shape=ellipse,label="Is Hot?" color=black, fontsize=80]; IsHot ;
+node [shape=ellipse,label="Is Dwarf?" color=black, fontsize=80]; IsDwarf ;
+node [shape=ellipse,label="Is [e]?" color=black, fontsize=80]; IsBracket ;
+node [shape=ellipse,label="Is OBAe?" color=black, fontsize=80]; IsOBAe ;
+node [shape=ellipse,label="Is OBA?" color=black, fontsize=80]; IsOBA ;
+node [shape=ellipse,label="Is Evolved?" color=black, fontsize=80]; IsEvolved ;
+node [shape=ellipse,label="Is MS?" color=black, fontsize=80]; IsMS ;
+node [shape=ellipse,label="Is SG?" color=black, fontsize=80]; IsSG ;
+node [shape=ellipse,label="Is C/S?" color=black, fontsize=80]; IsCS ;
+node [shape=ellipse,label="Is Variable?" color=black, fontsize=80]; IsVariable ;
+
+subgraph  {
+    rank="same"
+    Sample
+  }
+
+subgraph  {
+    rank="same"
+    IsLBV
+  }
+
+Sample->IsLBV ;
+
+subgraph  {
+    rank="same"
+    LBV
+    IsWR
+  }
+  
+IsLBV->LBV [ label = " Yes" , fontsize=80, penwidth=7];
+IsLBV->IsWR [ label = " No" , fontsize=80, penwidth=7];
+
+subgraph  {
+    rank="same"
+    WR
+    IsKM
+  }
+
+IsWR->WR [ label = " Yes" , fontsize=80, penwidth=7];
+IsWR->IsKM [ label = " No" , fontsize=80, penwidth=7];
+
+subgraph  {
+    rank="same"
+    IsGiant
+    IsFG
+  }
+
+IsKM->IsGiant [ label = " Yes" , fontsize=80, penwidth=7];
+IsKM->IsFG [ label = " No" , fontsize=80, penwidth=7];
+
+subgraph  {
+    rank="same"
+    CSG
+    RSG
+    IsHot
+    IsBracket
+  }
+
+
+IsGiant->CSG [ label = " Yes" , fontsize=80, penwidth=7];
+IsGiant->RSG [ label = " No" , fontsize=80, penwidth=7];
+IsFG->IsHot [ label = " Yes" , fontsize=80, penwidth=7];
+IsFG->IsBracket [ label = " No" , fontsize=80, penwidth=7];
+
+
+subgraph  {
+    rank="same"
+    IsDwarf
+    IsOBAe
+    Bracket
+  }
+
+IsHot->IsDwarf [ label = " No" , fontsize=80, penwidth=7];
+IsHot->IsOBAe[ label = " Yes" , fontsize=80, penwidth=7];
+IsBracket->IsOBAe [ label = " No" , fontsize=80, penwidth=7];
+IsBracket->Bracket [ label = " Yes", fontsize=80, penwidth=7];
+
+subgraph  {
+    rank="same"
+    YD
+    YSG
+    OBAe
+    IsOBA
+  }
+
+IsDwarf->YD [ label = " Yes" , fontsize=80, penwidth=7];
+IsDwarf->YSG [ label = " No" , fontsize=80, penwidth=7];
+IsOBAe->OBAe [ label = " Yes" , fontsize=80, penwidth=7];
+IsOBAe->IsOBA [ label = " No" , fontsize=80, penwidth=7];
+
+subgraph  {
+    rank="same"
+    IsEvolved
+    IsCS
+  }
+
+IsOBA->IsEvolved [ label = " Yes" , fontsize=80, penwidth=7];
+IsOBA->IsCS [ label = " No" , fontsize=80, penwidth=7];
+IsCS->CSG [ label = " Yes", fontsize=80, penwidth=7];
+
+subgraph  {
+    rank="same"
+    EvolvedOBA
+    IsMS
+    IsVariable
+  }
+
+IsEvolved->EvolvedOBA [ label = " Yes" , fontsize=80, penwidth=7];
+IsEvolved->IsMS [ label = " No" , fontsize=80, penwidth=7];
+IsCS->IsVariable [ label = " No" , fontsize=80, penwidth=7];
+
+subgraph  {
+    rank="same"
+    MainSequenceOBA
+    IsSG
+    MVar
+    UC
+  }
+
+IsMS->MainSequenceOBA [ label = " Yes", fontsize=80, penwidth=7];
+IsMS->IsSG [ label = " No" , fontsize=80, penwidth=7];
+IsVariable->MVar [ label = " Yes" , fontsize=80, penwidth=7];
+IsVariable->UC [ label = " No" , fontsize=80, penwidth=7];
+
+
+subgraph  {
+    rank="same"
+    SupergiantOBA
+    OBA
+  }
+
+IsSG->SupergiantOBA [ label = " Yes" , fontsize=80, penwidth=7];
+IsSG->OBA [ label = " No" , fontsize=80, penwidth=7];
+
+
+overlap=false
+label=""
+fontsize=12;
+
+}

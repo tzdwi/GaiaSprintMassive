@@ -1,0 +1,19 @@
+\begin{deluxetable*}{lccccccc}
+\tabletypesize{\scriptsize}
+\tablecaption{Common names, coordinates, host galaxies, and \Gaia measurements of 6,484 putative massive stars. $r_{est}$ from \citet{bailerjones18} is given for Galactic stars. Listed values of $G$ and $G_{BP}-G_{RP}$ are uncorrected for extinction.\label{tab:sample}}
+\tablehead{\colhead{Common Name} & \colhead{R.A. [deg]} & \colhead{Dec [deg]} & \colhead{Host Galaxy} & \colhead{$r_{est}$ [kpc]} & \colhead{$G$ [mag]} & \colhead{$A_G$ [mag]} & \colhead{$G_{BP}-G_{RP}$ [mag]}} 
+\startdata
+HD 236270 & 0.17442287 & 55.72245665 & Milky Way & 2.162 & 9.073082 & 0.942 & 0.24057600 \\ 
+LS   I +64   10 & 0.38838658 & 64.51219232 & Milky Way & 5.305 & 11.545427 & 1.3305 & 0.56807750 \\ 
+LS   I +60   69 & 0.55506135 & 60.43828347 & Milky Way & 5.866 & 11.854865 & 1.234 & 0.61282300 \\ 
+BD+62  2353 & 0.59458742 & 62.90087875 & Milky Way & 5.243 & 9.809305 & 0.485 & 0.37020600 \\ 
+HD     73 & 1.40408512 & 43.40139506 & Milky Way & 1.869 & 8.1893425 & 0.1245 & -0.14992300 \\ 
+HD 240496 & 1.42175475 & 58.49541068 & Milky Way & 2.499 & 9.698675 & 1.5533 & 0.68225500 \\ 
+WISE J000559.28-790653.3 & 1.49713706 & -79.11483482 & SMC &  -  & 13.9371195 & 0.21266685 & 1.04591900 \\ 
+LS   I +59   30 & 1.70503555 & 59.85955733 & Milky Way & 4.006 & 10.856779 & 1.188 & 0.50059550 \\ 
+BD+57  2870 & 1.82960982 & 58.33785301 & Milky Way & 3.893 & 9.841114 & 1.4205 & 0.82356400 \\ 
+BD+62     1 & 1.88805102 & 63.08030731 & Milky Way & 2.893 & 10.293984 & 1.2973 & 0.52861900 \\ 
+\enddata
+\tablecomments{The first ten rows are shown to illustrate the content of the table. A complete machine-readable version will be made available online via Vizier.}
+\end{deluxetable*}
+
